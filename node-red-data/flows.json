@@ -1,0 +1,704 @@
+[
+    {
+        "id": "m32_sync_tab",
+        "type": "tab",
+        "label": "M32 Advanced Sync",
+        "disabled": true,
+        "locked": true,
+        "info": "Dual M32 Sync with Safes and Auto-Init"
+    },
+    {
+        "id": "m32_single_test_tab",
+        "type": "tab",
+        "label": "M32 Single-Desk Mirror Test",
+        "disabled": false,
+        "info": "Mirroring Ch 1-16 to 17-32 and DCA 1-4 to 5-8 with Safes."
+    },
+    {
+        "id": "db2_final_fixed",
+        "type": "tab",
+        "label": "Mixer Config Fixed",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "startup_logic_group",
+        "type": "group",
+        "z": "db2_final_fixed",
+        "name": "Startup Configuration Loader",
+        "style": {
+            "stroke": "#929292",
+            "fill": "#f3f3f3",
+            "label": true
+        },
+        "nodes": [
+            "startup_trigger",
+            "read_config_file",
+            "json_parse_config",
+            "populate_global_mem"
+        ],
+        "x": 34,
+        "y": 199,
+        "w": 552,
+        "h": 169.5
+    },
+    {
+        "id": "ui-base-clean",
+        "type": "ui-base",
+        "name": "Mixer Utility Base",
+        "path": "/dashboard",
+        "appIcon": "",
+        "showPathInSidebar": false,
+        "headerContent": "page",
+        "titleBarStyle": "default",
+        "showReconnectNotification": true,
+        "notificationDisplayTime": 5,
+        "showDisconnectNotification": true,
+        "allowInstall": true
+    },
+    {
+        "id": "ui-theme-clean",
+        "type": "ui-theme",
+        "name": "Default Theme",
+        "colors": {
+            "primary": "#0094ce",
+            "accent": "#ff3100",
+            "surface": "#ffffff",
+            "background": "#eeeeee"
+        }
+    },
+    {
+        "id": "ui-page-clean",
+        "type": "ui-page",
+        "name": "Mixer Sync",
+        "ui": "ui-base-clean",
+        "path": "/mixer",
+        "icon": "",
+        "layout": "grid",
+        "theme": "ui-theme-clean",
+        "breakpoints": [
+            {
+                "name": "Default",
+                "px": "0",
+                "cols": "3"
+            },
+            {
+                "name": "Tablet",
+                "px": "576",
+                "cols": "6"
+            },
+            {
+                "name": "Small Desktop",
+                "px": "768",
+                "cols": "9"
+            },
+            {
+                "name": "Desktop",
+                "px": "1024",
+                "cols": "12"
+            }
+        ],
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "ui-group-clean",
+        "type": "ui-group",
+        "name": "Console Network Settings",
+        "page": "ui-page-clean",
+        "width": "6",
+        "height": "1",
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "primary_udp_in",
+        "type": "udp in",
+        "z": "m32_sync_tab",
+        "name": "From Primary M32",
+        "iface": "",
+        "port": "10023",
+        "ipv": "udp4",
+        "group": "",
+        "x": 130,
+        "y": 140,
+        "wires": [
+            [
+                "osc_decode_sync"
+            ]
+        ]
+    },
+    {
+        "id": "osc_decode_sync",
+        "type": "osc",
+        "z": "m32_sync_tab",
+        "name": "OSC Decode",
+        "path": "",
+        "metadata": false,
+        "x": 330,
+        "y": 140,
+        "wires": [
+            [
+                "sync_logic_engine"
+            ]
+        ]
+    },
+    {
+        "id": "sync_logic_engine",
+        "type": "function",
+        "z": "m32_sync_tab",
+        "name": "Sync Logic (Safes & Filters)",
+        "func": "// --- CONFIGURATION ---\nconst SAFE_NAMES = [\"Crowd\", \"Ambient\", \"Talkback\"]; \n\nlet topic = msg.topic;\nlet payload = msg.payload;\n\nlet isChannel = topic.startsWith(\"/ch/\");\nlet isDCA = topic.startsWith(\"/dca/\");\n\nif (isChannel || isDCA) {\n    let parts = topic.split('/');\n    let type = parts[1]; \n    let index = parts[2]; \n    let key = `${type}_${index}_name`;\n\n    // 1. ALWAYS store and sync Name changes\n    if (topic.endsWith(\"/config/name\")) {\n        global.set(key, payload[0]);\n        node.status({fill:\"blue\", shape:\"dot\", text:`Name Sync: ${payload[0]}`});\n        return msg; // Always forward name changes\n    }\n\n    // 2. Check for Mute or DCA Sync\n    const allowedSync = [\"/mix/on\", \"/grp/dca\"];\n\n    if (allowedSync.some(s => topic.endsWith(s))) {\n        let currentName = global.get(key) || \"\";\n\n        // If it's a Mute change AND the name is in the Safe list, block it\n        if (topic.endsWith(\"/mix/on\") && SAFE_NAMES.includes(currentName)) {\n            node.status({fill:\"yellow\", shape:\"ring\", text:`Mute Blocked (Safe): ${currentName}`});\n            return null;\n        }\n\n        // Otherwise, sync the Mute or DCA assignment\n        node.status({fill:\"green\", shape:\"dot\", text:`Syncing ${type} ${index}`});\n        return msg;\n    }\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 580,
+        "y": 140,
+        "wires": [
+            [
+                "osc_encode_sync"
+            ]
+        ]
+    },
+    {
+        "id": "osc_encode_sync",
+        "type": "osc",
+        "z": "m32_sync_tab",
+        "name": "OSC Encode",
+        "path": "",
+        "metadata": false,
+        "x": 830,
+        "y": 140,
+        "wires": [
+            [
+                "replica_udp_out"
+            ]
+        ]
+    },
+    {
+        "id": "replica_udp_out",
+        "type": "udp out",
+        "z": "m32_sync_tab",
+        "name": "To Replica M32",
+        "addr": "192.168.1.101",
+        "iface": "",
+        "port": "10023",
+        "ipv": "udp4",
+        "outport": "",
+        "base64": false,
+        "x": 1040,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "startup_init",
+        "type": "inject",
+        "z": "m32_sync_tab",
+        "name": "Sync All on Startup",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 2,
+        "topic": "",
+        "x": 140,
+        "y": 300,
+        "wires": [
+            [
+                "initial_query_logic"
+            ]
+        ]
+    },
+    {
+        "id": "initial_query_logic",
+        "type": "function",
+        "z": "m32_sync_tab",
+        "name": "Query Primary Desk",
+        "func": "// Loop through all 32 channels and 8 DCAs\nfor (let i = 1; i <= 32; i++) {\n    let ch = i.toString().padStart(2, '0');\n    node.send({ topic: `/ch/${ch}/config/name` });\n    node.send({ topic: `/ch/${ch}/mix/on` });\n    node.send({ topic: `/ch/${ch}/grp/dca` });\n}\nfor (let j = 1; j <= 8; j++) {\n    node.send({ topic: `/dca/${j}/config/name` });\n    node.send({ topic: `/dca/${j}/mix/on` });\n}\nreturn null;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 300,
+        "wires": [
+            [
+                "osc_encode_primary"
+            ]
+        ]
+    },
+    {
+        "id": "osc_encode_primary",
+        "type": "osc",
+        "z": "m32_sync_tab",
+        "name": "OSC Encode",
+        "path": "",
+        "metadata": false,
+        "x": 590,
+        "y": 300,
+        "wires": [
+            [
+                "primary_udp_out"
+            ]
+        ]
+    },
+    {
+        "id": "primary_udp_out",
+        "type": "udp out",
+        "z": "m32_sync_tab",
+        "name": "To Primary (Query)",
+        "addr": "192.168.1.100",
+        "iface": "",
+        "port": "10023",
+        "ipv": "udp4",
+        "outport": "",
+        "base64": false,
+        "x": 810,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "heartbeat_primary",
+        "type": "inject",
+        "z": "m32_sync_tab",
+        "name": "8s Heartbeat",
+        "props": [],
+        "repeat": "8",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "x": 130,
+        "y": 240,
+        "wires": [
+            [
+                "xremote_primary"
+            ]
+        ]
+    },
+    {
+        "id": "xremote_primary",
+        "type": "function",
+        "z": "m32_sync_tab",
+        "name": "Build /xremote",
+        "func": "msg.topic = \"/xremote\";\nmsg.payload = [];\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 240,
+        "wires": [
+            [
+                "osc_encode_primary"
+            ]
+        ]
+    },
+    {
+        "id": "m32_udp_in",
+        "type": "udp in",
+        "z": "m32_single_test_tab",
+        "name": "From M32",
+        "iface": "",
+        "port": "10023",
+        "ipv": "udp4",
+        "x": 110,
+        "y": 120,
+        "wires": [
+            [
+                "osc_decode_test"
+            ]
+        ]
+    },
+    {
+        "id": "osc_decode_test",
+        "type": "osc",
+        "z": "m32_single_test_tab",
+        "name": "OSC Decode",
+        "path": "",
+        "metadata": false,
+        "x": 290,
+        "y": 120,
+        "wires": [
+            [
+                "single_desk_logic",
+                "79bfe5d8bb8c9a99"
+            ]
+        ]
+    },
+    {
+        "id": "single_desk_logic",
+        "type": "function",
+        "z": "m32_single_test_tab",
+        "name": "Single Desk Mirror + Safes",
+        "func": "// Pull the settings from the Dashboard's global memory\nlet config = global.get(\"app_config\") || {\n    primary_ip: \"127.0.0.1\",\n    replica_ip: \"127.0.0.1\",\n    safe_names: \"crowd\"\n};\n\n// Apply these to your logic variables\nconst SAFE_NAMES = config.safe_names.split(',').map(s => s.trim().toLowerCase());\nconst REPLICA_IP = config.replica_ip;\n\n// Now, use REPLICA_IP in your UDP Out node logic if needed, \n// or ensure your UDP Out node is set to the correct IP.\nlet topic = msg.topic;\nlet payload = Array.isArray(msg.payload) ? msg.payload : [msg.payload];\n\n// HELPER: Clean names from OSC (removes null bytes and extra spaces)\nfunction cleanOSC(input) {\n    if (!input) return \"\";\n    return input.toString().replace(/\\0/g, '').trim();\n}\n\n// 1. CHANNEL LOGIC (1-16 -> 17-32)\nif (topic.startsWith(\"/ch/\")) {\n    let parts = topic.split('/');\n    let chIndex = parts[2]; \n    let channelNum = parseInt(chIndex);\n\n    if (channelNum >= 1 && channelNum <= 16) {\n        let key = `ch_${chIndex}_name`;\n        let targetCH = (channelNum + 16).toString().padStart(2, '0');\n\n        // --- NAME SYNC & STORAGE ---\n        if (topic.endsWith(\"/config/name\")) {\n            let newName = cleanOSC(payload[0]);\n            global.set(key, newName);\n            \n            msg.topic = `/ch/${targetCH}/config/name`;\n            msg.payload = newName;\n            node.status({fill:\"blue\", shape:\"dot\", text:`Stored: ${newName}`});\n            return msg;\n        }\n\n        // --- MUTE SYNC WITH SUBSTRING SAFE ---\n        if (topic.endsWith(\"/mix/on\")) {\n            let rawStoredName = global.get(key) || \"\";\n            let currentName = cleanOSC(rawStoredName).toLowerCase();\n            \n            // Logic Change: Check if ANY safe keyword is FOUND WITHIN the channel name\n            let isSafe = SAFE_NAMES.some(safeWord => currentName.includes(safeWord.toLowerCase()));\n            \n            if (isSafe) {\n                node.status({fill:\"yellow\", shape:\"ring\", text:`SAFE: ${currentName} (Blocked)`});\n                return null; \n            } else {\n                msg.topic = `/ch/${targetCH}/mix/on`;\n                msg.payload = { type: \"i\", value: parseInt(payload[0]) };\n                node.status({fill:\"green\", shape:\"dot\", text:`Mirroring: ${currentName}`});\n                return msg;\n            }\n        }\n\n        // --- DCA ASSIGNMENT ---\n        if (topic.endsWith(\"/grp/dca\")) {\n            msg.topic = `/ch/${targetCH}/grp/dca`;\n            msg.payload = { type: \"i\", value: parseInt(payload[0]) };\n            return msg;\n        }\n    }\n}\n\n// 2. DCA MASTER LOGIC (1-4 -> 5-8)\nif (topic.startsWith(\"/dca/\")) {\n    let dcaNum = parseInt(topic.split('/')[2]);\n    if (dcaNum >= 1 && dcaNum <= 4) {\n        let targetDCA = dcaNum + 4;\n        if (topic.endsWith(\"/config/name\")) {\n            msg.topic = `/dca/${targetDCA}/config/name`;\n        } else {\n            msg.topic = `/dca/${targetDCA}/on`;\n            msg.payload = { type: \"i\", value: parseInt(payload[0]) };\n        }\n        return msg;\n    }\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 540,
+        "y": 120,
+        "wires": [
+            [
+                "osc_encode_test"
+            ]
+        ]
+    },
+    {
+        "id": "osc_encode_test",
+        "type": "osc",
+        "z": "m32_single_test_tab",
+        "name": "OSC Encode",
+        "path": "",
+        "metadata": false,
+        "x": 770,
+        "y": 120,
+        "wires": [
+            [
+                "m32_udp_out"
+            ]
+        ]
+    },
+    {
+        "id": "m32_udp_out",
+        "type": "udp out",
+        "z": "m32_single_test_tab",
+        "name": "To M32",
+        "addr": "172.23.1.54",
+        "iface": "",
+        "port": "10023",
+        "ipv": "udp4",
+        "outport": "",
+        "base64": false,
+        "x": 950,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "m32_heartbeat",
+        "type": "inject",
+        "z": "m32_single_test_tab",
+        "name": "8s Heartbeat",
+        "props": [],
+        "repeat": "8",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "x": 110,
+        "y": 240,
+        "wires": [
+            [
+                "xremote_cmd"
+            ]
+        ]
+    },
+    {
+        "id": "xremote_cmd",
+        "type": "function",
+        "z": "m32_single_test_tab",
+        "name": "Build /xremote",
+        "func": "msg.topic = \"/xremote\";\nmsg.payload = [];\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 300,
+        "y": 240,
+        "wires": [
+            [
+                "osc_encode_test"
+            ]
+        ]
+    },
+    {
+        "id": "79bfe5d8bb8c9a99",
+        "type": "debug",
+        "z": "m32_single_test_tab",
+        "name": "Monitor Incoming OSC",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 540,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "37f4342008d5f704",
+        "type": "function",
+        "z": "m32_single_test_tab",
+        "name": "Query Primary Desk",
+        "func": "// Initialization for Single-Mixer Test (Querying Ch 1-16 and DCA 1-4)\nfor (let i = 1; i <= 16; i++) {\n    let ch = i.toString().padStart(2, '0');\n    // Ask for Name, Mute State, and DCA Assignments\n    node.send({ topic: `/ch/${ch}/config/name` });\n    node.send({ topic: `/ch/${ch}/mix/on` });\n    node.send({ topic: `/ch/${ch}/grp/dca` });\n}\n\nfor (let j = 1; j <= 4; j++) {\n    // Ask for DCA Name and DCA Master Mute\n    node.send({ topic: `/dca/${j}/config/name` });\n    node.send({ topic: `/dca/${j}/on` });\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 320,
+        "wires": [
+            [
+                "osc_encode_test"
+            ]
+        ]
+    },
+    {
+        "id": "6e1a259d05c9f5d6",
+        "type": "inject",
+        "z": "m32_single_test_tab",
+        "name": "Sync All on Startup",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 2,
+        "topic": "",
+        "x": 130,
+        "y": 320,
+        "wires": [
+            [
+                "37f4342008d5f704"
+            ]
+        ]
+    },
+    {
+        "id": "input-primary-clean",
+        "type": "ui-text-input",
+        "z": "db2_final_fixed",
+        "group": "ui-group-clean",
+        "name": "Primary IP",
+        "label": "Primary Mixer IP",
+        "order": "",
+        "width": "",
+        "height": "",
+        "topic": "primary_ip",
+        "topicType": "str",
+        "mode": "text",
+        "tooltip": "",
+        "delay": "",
+        "passthru": true,
+        "sendOnDelay": true,
+        "sendOnBlur": true,
+        "sendOnEnter": true,
+        "className": "",
+        "clearable": false,
+        "sendOnClear": false,
+        "icon": "",
+        "iconPosition": "left",
+        "iconInnerPosition": "inside",
+        "x": 710,
+        "y": 240,
+        "wires": [
+            [
+                "logic_final"
+            ]
+        ]
+    },
+    {
+        "id": "input-replica-clean",
+        "type": "ui-text-input",
+        "z": "db2_final_fixed",
+        "group": "ui-group-clean",
+        "name": "Replica IP",
+        "label": "Replica Mixer IP",
+        "order": "",
+        "width": "",
+        "height": "",
+        "topic": "replica_ip",
+        "topicType": "str",
+        "mode": "text",
+        "tooltip": "",
+        "delay": "",
+        "passthru": true,
+        "sendOnDelay": true,
+        "sendOnBlur": true,
+        "sendOnEnter": true,
+        "className": "",
+        "clearable": false,
+        "sendOnClear": false,
+        "icon": "",
+        "iconPosition": "left",
+        "iconInnerPosition": "inside",
+        "x": 710,
+        "y": 280,
+        "wires": [
+            [
+                "logic_final"
+            ]
+        ]
+    },
+    {
+        "id": "input-safes-clean",
+        "type": "ui-text-input",
+        "z": "db2_final_fixed",
+        "group": "ui-group-clean",
+        "name": "Safes",
+        "label": "Safe Substrings (Comma Separated)",
+        "order": "",
+        "width": "",
+        "height": "",
+        "topic": "safe_names",
+        "topicType": "str",
+        "mode": "text",
+        "tooltip": "",
+        "delay": "",
+        "passthru": true,
+        "sendOnDelay": true,
+        "sendOnBlur": true,
+        "sendOnEnter": true,
+        "className": "",
+        "clearable": false,
+        "sendOnClear": false,
+        "icon": "",
+        "iconPosition": "left",
+        "iconInnerPosition": "inside",
+        "x": 690,
+        "y": 320,
+        "wires": [
+            [
+                "logic_final"
+            ]
+        ]
+    },
+    {
+        "id": "logic_final",
+        "type": "function",
+        "z": "db2_final_fixed",
+        "name": "Sync & Persist",
+        "func": "let config = global.get(\"app_config\") || {\n    primary_ip: \"192.168.1.100\",\n    replica_ip: \"192.168.1.101\",\n    safe_names: \"crowd, ambient\"\n};\nconfig[msg.topic] = msg.payload;\nglobal.set(\"app_config\", config);\nmsg.payload = config;\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 980,
+        "y": 280,
+        "wires": [
+            [
+                "save_disk_final"
+            ]
+        ]
+    },
+    {
+        "id": "save_disk_final",
+        "type": "file",
+        "z": "db2_final_fixed",
+        "name": "Save Config",
+        "filename": "${CONFIG_FILE_PATH}",
+        "filenameType": "str",
+        "appendNewline": true,
+        "createDir": true,
+        "overwriteFile": "true",
+        "x": 1200,
+        "y": 280,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "startup_trigger",
+        "type": "inject",
+        "z": "db2_final_fixed",
+        "g": "startup_logic_group",
+        "name": "On Start",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "x": 140,
+        "y": 240,
+        "wires": [
+            [
+                "read_config_file"
+            ]
+        ]
+    },
+    {
+        "id": "read_config_file",
+        "type": "file in",
+        "z": "db2_final_fixed",
+        "g": "startup_logic_group",
+        "name": "Read mixer_config.json",
+        "filename": "${CONFIG_FILE_PATH}",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "utf8",
+        "allProps": false,
+        "x": 380,
+        "y": 240,
+        "wires": [
+            [
+                "json_parse_config"
+            ]
+        ]
+    },
+    {
+        "id": "json_parse_config",
+        "type": "json",
+        "z": "db2_final_fixed",
+        "g": "startup_logic_group",
+        "name": "Convert to Object",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 190,
+        "y": 320,
+        "wires": [
+            [
+                "populate_global_mem"
+            ]
+        ]
+    },
+    {
+        "id": "populate_global_mem",
+        "type": "function",
+        "z": "db2_final_fixed",
+        "g": "startup_logic_group",
+        "name": "Populate Memory",
+        "func": "// 1. Save to Global Memory for the Logic Engine\nglobal.set(\"app_config\", msg.payload);\n\n// 2. Format the messages to update the Dashboard Inputs\n// We send three separate messages out of the function\nlet primaryMsg = { payload: msg.payload.primary_ip, topic: \"primary_ip\" };\nlet replicaMsg = { payload: msg.payload.replica_ip, topic: \"replica_ip\" };\nlet safeMsg = { payload: msg.payload.safe_names, topic: \"safe_names\" };\n\nnode.status({fill:\"green\", shape:\"dot\", text:\"UI & Memory Populated\"});\n\n// Return the messages to the three dashboard nodes\nreturn [primaryMsg, replicaMsg, safeMsg];",
+        "outputs": 3,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 470,
+        "y": 320,
+        "wires": [
+            [
+                "input-primary-clean"
+            ],
+            [
+                "input-replica-clean"
+            ],
+            [
+                "input-safes-clean"
+            ]
+        ]
+    }
+]

@@ -1,0 +1,16 @@
+﻿services:
+  m32-sync:
+    build: .
+    container_name: m32-sync-utility
+    restart: always
+    network_mode: "host" # This bypasses the Podman bridge
+    ports:
+      - "1880:1880"
+      - "10025:10023/udp"
+    volumes:
+      - m32_church_data:/data # Podman handles all permissions here
+    environment:
+      - TZ=America/Chicago
+      - CONFIG_FILE_PATH=/data/mixer_config.json # Your new variable
+volumes:
+  m32_church_data: # This creates a permanent internal drive

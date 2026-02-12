@@ -1,0 +1,20 @@
+# Ignore Node-RED bloat
+node_modules/
+.npm/
+*.log
+.config.json.backup
+
+#  Ignore .vscode
+.vscode
+
+# Ignore Podman/Docker local data (except your config)
+node-red-data/lib/
+node-red-data/node_modules/
+node-red-data/.config.runtime.json
+node-red-data/.sessions.json
+
+# DO NOT ignore these (we want these in GitHub)
+!node-red-data/flows.json
+!node-red-data/package.json
+!node-red-data/settings.js
+!node-red-data/mixer_config.json
