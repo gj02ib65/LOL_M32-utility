@@ -1,0 +1,20 @@
+version: '3'
+
+vars:
+  CONTAINER_NAME: m32-sync-utility
+  SRC_DIR: ./src
+
+tasks:
+  pull:
+    desc: Syncs the "live" flows and package data from the running container back to the repo.
+    cmds:
+      - echo "Pulling live flows from {{.CONTAINER_NAME}}..."
+      - podman cp {{.CONTAINER_NAME}}:/data/flows.json {{.SRC_DIR}}/flows.json
+      - podman cp {{.CONTAINER_NAME}}:/data/package.json {{.SRC_DIR}}/package.json
+      - echo "Done! You can now 'git add src/flows.json' to save your changes."
+
+  build:
+    desc: Rebuilds the container image after you've pulled the latest flows.
+    cmds:
+      - podman-compose build
+      - podman-compose up -d
