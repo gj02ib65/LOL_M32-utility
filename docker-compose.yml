@@ -6,7 +6,7 @@
     network_mode: "host" # This bypasses the Podman bridge
     ports:
       - "1880:1880"
-      - "10025:10023/udp"
+      - "10023:10023/udp"
     volumes:
       - m32_church_data:/data # Podman handles all permissions here
     environment:

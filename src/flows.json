@@ -584,7 +584,7 @@
         "ipv": "udp4",
         "outport": "",
         "base64": false,
-        "x": 1430,
+        "x": 1450,
         "y": 120,
         "wires": []
     },
@@ -612,7 +612,7 @@
         "name": "OSC Encode",
         "path": "",
         "metadata": true,
-        "x": 1250,
+        "x": 1270,
         "y": 120,
         "wires": [
             [
