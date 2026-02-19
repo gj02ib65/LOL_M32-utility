@@ -1,0 +1,73 @@
+name: M32 Utility Build & Maintenance
+
+on:
+  schedule:
+    # Runs at midnight every day for the first 7 days of the month
+    - cron: '0 0 1-7 * *'
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'src/**'
+      - 'containers/**'
+  workflow_dispatch:
+    # Allows you to manually trigger a build from the Actions tab
+
+env:
+  REGISTRY: ghcr.io
+  # We force lowercase for the image name to prevent GHCR errors
+  IMAGE_NAME: ${{ github.repository_owner }}/lol_m32-utility
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Check if Monday (for Scheduled Runs Only)
+        if: github.event_name == 'schedule'
+        run: |
+          if [ "$(date +%u)" != "1" ]; then
+            echo "Today is not Monday. Skipping scheduled monthly build."
+            exit 0
+          fi
+
+      - name: Get Current Date
+        id: date
+        run: echo "today=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./containers/app/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.date.outputs.today }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+  cleanup:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Delete Old Image Versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: 'lol_m32-utility'
+          package-type: 'container'
+          # Keep only the 'latest' and the specific date tag we just made
+          min-versions-to-keep: 2

@@ -14,7 +14,20 @@ tasks:
       - echo "Done! You can now 'git add src/flows.json' to save your changes."
 
   build:
-    desc: Rebuilds the container image after you've pulled the latest flows.
+    desc: Rebuilds the container image locally using the Dockerfile in /containers/app.
     cmds:
-      - podman-compose build
-      - podman-compose up -d
+      - podman compose build 
+      - podman compose up -d
+      - task: status
+
+  status:
+    desc: Quick check of the container health and current config.
+    cmds:
+      - podman ps --filter name={{.CONTAINER_NAME}}
+      - echo "--- Current App Config ---"
+      - podman exec {{.CONTAINER_NAME}} cat /data/mixer_config.json
+  
+  logs:
+    desc: Follow the live logs from the mixer sync engine.
+    cmds:
+      - podman logs -f {{.CONTAINER_NAME}}
