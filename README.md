@@ -54,11 +54,6 @@ The system is built on a high-performance **UDP/OSC Routing Engine** designed to
 * **Port:** Consoles must be reachable on UDP Port `10023`.
 
 ---
-Adding a **Logic Flow** section is a great way to help users (or your future self) understand how a single button press on the FOH console actually makes its way to the Livestream desk.
-
-Here is the updated section to be added to your README.
-
----
 
 ## 🧠 Logic Flow: The Journey of a Mute Command
 
