@@ -1,0 +1,56 @@
+name: Monthly Maintenance & Cleanup
+
+on:
+  schedule:
+    # Run every day for the first week of the month at midnight
+    - cron: '0 0 1-7 * *'
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if today is Monday
+        run: |
+          if [ "$(date +%u)" != "1" ]; then
+            echo "Today is not Monday. Skipping build."
+            exit 0
+          fi
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+              uses: docker/build-push-action@v5
+              with:
+                context: .
+                file: ./containers/app/Dockerfile
+                push: true
+                tags: |
+                  ghcr.io/${{ github.repository_owner }}/m32-sync-utility:latest
+                  ghcr.io/${{ github.repository_owner }}/m32-sync-utility:${{ github.sha }}
+                  ghcr.io/${{ github.repository_owner }}/m32-sync-utility:${{ steps.date.outputs.date }}
+
+  cleanup-old-versions:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+      - name: Delete Old Image Versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: 'm32-sync-utility'
+          package-type: 'container'
+          # Keep only the most recent version (the one we just built)
+          min-versions-to-keep: 1
+          # Alternatively, you can delete by age, but min-versions is safer for storage
+          # delete-only-untagged-versions: 'true'

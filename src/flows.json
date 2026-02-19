@@ -4,7 +4,7 @@
         "type": "tab",
         "label": "Mixer Config Fixed",
         "disabled": false,
-        "info": ""
+        "info": "This flow sets up and establishes connections to the Behringer X32 or Midas M32 mixing consoles. "
     },
     {
         "id": "045edc975e658572",
