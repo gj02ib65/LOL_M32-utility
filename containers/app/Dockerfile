@@ -11,6 +11,7 @@ RUN apk add --no-cache build-base python3
 # RUN mkdir -p /etc/doas.d && \
 #     echo "permit nopass node-red as root" > /etc/doas.d/doas.conf
 # 3. Switch back to the node-red user
+ENV CONFIG_FILE_PATH=/data/mixer_config.json
 USER node-red
 
 # 4. Install the Node-RED packages
