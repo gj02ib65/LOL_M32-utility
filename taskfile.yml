@@ -31,3 +31,15 @@ tasks:
     desc: Follow the live logs from the mixer sync engine.
     cmds:
       - podman logs -f {{.CONTAINER_NAME}}
+
+  rollback:
+    desc: Reverts the container to a specific tagged version (e.g., task rollback VERSION=2026-01-05).
+    vars:
+      VERSION: '{{.VERSION | default "latest"}}'
+    cmds:
+      - echo "Rolling back to version {{.VERSION}}..."
+      - podman pull ghcr.io/your-username/m32-sync-utility:{{.VERSION}}
+      - |
+        # Update the image tag in docker-compose temporarily or use an environment variable
+        IMAGE_TAG={{.VERSION}} podman-compose up -d
+      - echo "Rollback complete. Running version {{.VERSION}}."

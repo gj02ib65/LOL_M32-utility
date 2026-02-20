@@ -1,4 +1,4 @@
-﻿FROM nodered/node-red:latest
+﻿FROM nodered/node-red:latest-22
 
 # 1. Switch to root to install system dependencies
 USER root

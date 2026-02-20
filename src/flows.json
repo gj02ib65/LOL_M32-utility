@@ -3,11 +3,25 @@
         "id": "55b1305a0bb026ff",
         "type": "tab",
         "label": "Mixer Config Fixed",
-        "disabled": false,
+        "disabled": true,
         "info": "This flow sets up and establishes connections to the Behringer X32 or Midas M32 mixing consoles. "
     },
     {
         "id": "045edc975e658572",
+        "type": "tab",
+        "label": "Dual Mixer Sync",
+        "disabled": true,
+        "info": "Consolidated Dual Mixer Sync with Simulation Mode and Safe List logic."
+    },
+    {
+        "id": "3c1a1c73431382ea",
+        "type": "tab",
+        "label": "Mixer Config Fixed",
+        "disabled": false,
+        "info": "This flow sets up and establishes connections to the Behringer X32 or Midas M32 mixing consoles. "
+    },
+    {
+        "id": "acb1261afd28cef6",
         "type": "tab",
         "label": "Dual Mixer Sync",
         "disabled": false,
@@ -50,7 +64,7 @@
             "8b5a0e8b20821999"
         ],
         "x": 34,
-        "y": 459,
+        "y": 499,
         "w": 762,
         "h": 102
     },
@@ -68,7 +82,66 @@
             "ee95150baf703bce"
         ],
         "x": 34,
-        "y": 579,
+        "y": 619,
+        "w": 492,
+        "h": 82
+    },
+    {
+        "id": "9c240fe87b4f6f6f",
+        "type": "group",
+        "z": "3c1a1c73431382ea",
+        "name": "Startup Configuration Loader",
+        "style": {
+            "stroke": "#929292",
+            "fill": "#f3f3f3",
+            "label": true
+        },
+        "nodes": [
+            "acaf52b92f7a10b3",
+            "6fb1e959596744ba",
+            "1f463f07f1d730d5",
+            "1d4674254f4c81ac"
+        ],
+        "x": 34,
+        "y": 199,
+        "w": 552,
+        "h": 197
+    },
+    {
+        "id": "7591be1e1d3c96e4",
+        "type": "group",
+        "z": "3c1a1c73431382ea",
+        "name": "Console Health Check",
+        "style": {
+            "stroke": "#929292",
+            "fill": "#f3f3f3",
+            "label": true
+        },
+        "nodes": [
+            "8cb42a98670e40c7",
+            "31f2ab777587c863",
+            "223fe04efca6a85a"
+        ],
+        "x": 34,
+        "y": 499,
+        "w": 762,
+        "h": 102
+    },
+    {
+        "id": "aeb187c0ea7aedcf",
+        "type": "group",
+        "z": "3c1a1c73431382ea",
+        "name": "Replicate Primary Mix Channel Names and DCAs at startup",
+        "style": {
+            "label": true,
+            "fill": "#f3f3f3"
+        },
+        "nodes": [
+            "be38de1246053556",
+            "d7785e534acfcd67"
+        ],
+        "x": 34,
+        "y": 619,
         "w": 492,
         "h": 82
     },
@@ -225,7 +298,7 @@
         "group": "ui-group-clean",
         "name": "Safes",
         "label": "Safe Substrings (Comma Separated)",
-        "order": 9,
+        "order": 6,
         "width": "",
         "height": "",
         "topic": "safe_names",
@@ -388,7 +461,7 @@
         "onceDelay": "",
         "topic": "",
         "x": 140,
-        "y": 520,
+        "y": 560,
         "wires": [
             [
                 "cb60e1c7730b4854"
@@ -401,7 +474,7 @@
         "z": "55b1305a0bb026ff",
         "g": "131b306ef4235efd",
         "name": "Get IPs and Xremote Heartbeat",
-        "func": "const config = global.get('app_config');\n\nif (!config || !config.primary_ip || !config.replica_ip) {\n    node.status({fill:\"red\", shape:\"ring\", text:\"Missing IPs\"});\n    return null;\n}\n\nconst SIM_MODE = (config.sim_mode === true || config.sim_mode === \"true\");\nlet messages = [];\n\n// 1. PRIMARY: Subscribe and Poll\nmessages.push({ topic: \"/xremote\", payload: [], ip: config.primary_ip, port: 10023 });\nmessages.push({ topic: \"/info\", payload: [], ip: config.primary_ip, port: 10023 });\n\n\n\n// 2. REPLICA: Poll only if not in Sim Mode\nif (!SIM_MODE) {\n    messages.push({ topic: \"/info\", payload: [], ip: config.replica_ip, port: 10023 });\n}\n\n\nnode.status({\n    fill: \"green\", \n    shape: \"dot\", \n    text: SIM_MODE ? \"Primary Active (Sim Mode)\" : \"Both Consoles Polled\"\n});\n\n/**\n * THE RETURN RULE:\n * [ Output1_Messages, Output2_Message ]\n * By passing the 'messages' array as the first element, Node-RED \n * will automatically \"burst\" them out as separate UDP packets.\n */\nreturn [messages];",
+        "func": "if (global.get(\"system_active\") === false) {\n    node.status({fill:\"yellow\", shape:\"ring\", text:\"Standby\"});\n    return null; // Stop the 5s heartbeat loop\n}\n\nconst config = global.get('app_config');\n\nif (!config || !config.primary_ip || !config.replica_ip) {\n    node.status({fill:\"red\", shape:\"ring\", text:\"Missing IPs\"});\n    return null;\n}\n\nconst SIM_MODE = (config.sim_mode === true || config.sim_mode === \"true\");\nlet messages = [];\n\n// 1. PRIMARY: Subscribe and Poll\nmessages.push({ topic: \"/xremote\", payload: [], ip: config.primary_ip, port: 10023 });\nmessages.push({ topic: \"/info\", payload: [], ip: config.primary_ip, port: 10023 });\n\n\n\n// 2. REPLICA: Poll only if not in Sim Mode\nif (!SIM_MODE) {\n    messages.push({ topic: \"/info\", payload: [], ip: config.replica_ip, port: 10023 });\n}\n\n\nnode.status({\n    fill: \"green\", \n    shape: \"dot\", \n    text: SIM_MODE ? \"Primary Active (Sim Mode)\" : \"Both Consoles Polled\"\n});\n\n/**\n * THE RETURN RULE:\n * [ Output1_Messages, Output2_Message ]\n * By passing the 'messages' array as the first element, Node-RED \n * will automatically \"burst\" them out as separate UDP packets.\n */\nreturn [messages];",
         "outputs": 1,
         "timeout": "",
         "noerr": 0,
@@ -409,7 +482,7 @@
         "finalize": "",
         "libs": [],
         "x": 360,
-        "y": 520,
+        "y": 560,
         "wires": [
             [
                 "8b5a0e8b20821999"
@@ -427,7 +500,7 @@
             "809688203d471d55"
         ],
         "x": 755,
-        "y": 500,
+        "y": 540,
         "wires": []
     },
     {
@@ -436,7 +509,7 @@
         "z": "55b1305a0bb026ff",
         "g": "4365f97e69577b75",
         "name": "Query Primary Desk",
-        "func": "const config = global.get('app_config');\n\n// Safety Check: If config isn't loaded yet, don't send anything\nif (!config || !config.primary_ip) {\n    node.status({ fill: \"red\", shape: \"ring\", text: \"No Primary IP found\" });\n    return null;\n}\n\nconst PRIMARY_IP = config.primary_ip;\nconst PORT = 10023;\n\n// 1. Query all 32 Channels\nfor (let i = 1; i <= 32; i++) {\n    let ch = i.toString().padStart(2, '0');\n\n    // We send an object for each request\n    node.send({\n        topic: `/ch/${ch}/config/name`,\n        ip: PRIMARY_IP,\n        port: PORT\n    });\n    node.send({\n        topic: `/ch/${ch}/mix/on`,\n        ip: PRIMARY_IP,\n        port: PORT\n    });\n    node.send({\n        topic: `/ch/${ch}/grp/dca`,\n        ip: PRIMARY_IP,\n        port: PORT\n    });\n}\n\n// 2. Query all 8 DCAs\nfor (let j = 1; j <= 8; j++) {\n    node.send({\n        topic: `/dca/${j}/config/name`,\n        ip: PRIMARY_IP,\n        port: PORT\n    });\n    node.send({\n        topic: `/dca/${j}/on`,\n        ip: PRIMARY_IP,\n        port: PORT\n    });\n}\n\nnode.status({ fill: \"green\", shape: \"dot\", text: \"Querying Mixer...\" });\nreturn null;",
+        "func": "if (global.get(\"system_active\") === false) return null;\n\nconst config = global.get('app_config');\n\n// Safety Check: If config isn't loaded yet, don't send anything\nif (!config || !config.primary_ip) {\n    node.status({ fill: \"red\", shape: \"ring\", text: \"No Primary IP found\" });\n    return null;\n}\n\nconst PRIMARY_IP = config.primary_ip;\nconst PORT = 10023;\n\n// 1. Query all 32 Channels\nfor (let i = 1; i <= 32; i++) {\n    let ch = i.toString().padStart(2, '0');\n\n    // We send an object for each request\n    node.send({\n        topic: `/ch/${ch}/config/name`,\n        ip: PRIMARY_IP,\n        port: PORT\n    });\n    node.send({\n        topic: `/ch/${ch}/mix/on`,\n        ip: PRIMARY_IP,\n        port: PORT\n    });\n    node.send({\n        topic: `/ch/${ch}/grp/dca`,\n        ip: PRIMARY_IP,\n        port: PORT\n    });\n}\n\n// 2. Query all 8 DCAs\nfor (let j = 1; j <= 8; j++) {\n    node.send({\n        topic: `/dca/${j}/config/name`,\n        ip: PRIMARY_IP,\n        port: PORT\n    });\n    node.send({\n        topic: `/dca/${j}/on`,\n        ip: PRIMARY_IP,\n        port: PORT\n    });\n}\n\nnode.status({ fill: \"green\", shape: \"dot\", text: \"Querying Mixer...\" });\nreturn null;",
         "outputs": 1,
         "timeout": "",
         "noerr": 0,
@@ -444,7 +517,7 @@
         "finalize": "",
         "libs": [],
         "x": 400,
-        "y": 620,
+        "y": 660,
         "wires": [
             [
                 "8b5a0e8b20821999"
@@ -464,7 +537,7 @@
         "onceDelay": 2,
         "topic": "",
         "x": 170,
-        "y": 620,
+        "y": 660,
         "wires": [
             [
                 "53180069e840ae5b"
@@ -478,7 +551,7 @@
         "name": "Simulation Mode",
         "label": "Simulation Mode (No Replica Mixer)",
         "group": "ui-group-clean",
-        "order": 11,
+        "order": 7,
         "width": "",
         "height": "",
         "passthru": true,
@@ -519,6 +592,38 @@
         "wires": []
     },
     {
+        "id": "aaa42a0e08fe8c48",
+        "type": "ui-switch",
+        "z": "55b1305a0bb026ff",
+        "name": "System Status: Standby / Active",
+        "label": "Standby/Active",
+        "group": "ui-group-clean",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "decouple": false,
+        "topic": "system_active",
+        "topicType": "global",
+        "style": "",
+        "className": "",
+        "layout": "row-spread",
+        "clickableArea": "label",
+        "onvalue": "true",
+        "onvalueType": "bool",
+        "onicon": "",
+        "oncolor": "",
+        "offvalue": "false",
+        "offvalueType": "bool",
+        "officon": "",
+        "offcolor": "",
+        "x": 790,
+        "y": 460,
+        "wires": [
+            []
+        ]
+    },
+    {
         "id": "2d866440bb92164e",
         "type": "function",
         "z": "045edc975e658572",
@@ -551,7 +656,8 @@
         "y": 160,
         "wires": [
             [
-                "6b36dad599913889"
+                "6b36dad599913889",
+                "6d8058d6e96a3856"
             ]
         ]
     },
@@ -600,8 +706,8 @@
         "y": 40,
         "wires": [
             [
-                "19ced5a20b801f97",
-                "e71e2f0c4761a9ab"
+                "e71e2f0c4761a9ab",
+                "19ced5a20b801f97"
             ]
         ]
     },
@@ -631,7 +737,7 @@
         "ipv": "udp4",
         "outport": "",
         "base64": false,
-        "x": 1030,
+        "x": 1190,
         "y": 40,
         "wires": []
     },
@@ -640,7 +746,7 @@
         "type": "debug",
         "z": "045edc975e658572",
         "name": "Audit log",
-        "active": false,
+        "active": true,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -657,7 +763,7 @@
         "type": "debug",
         "z": "045edc975e658572",
         "name": "Heartbeat and Startup output",
-        "active": false,
+        "active": true,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -701,7 +807,7 @@
         "name": "OSC Encode (Query)",
         "path": "",
         "metadata": true,
-        "x": 800,
+        "x": 980,
         "y": 40,
         "wires": [
             [
@@ -714,7 +820,7 @@
         "type": "function",
         "z": "045edc975e658572",
         "name": "Network Router",
-        "func": "const config = global.get('app_config') || {};\nconst primaryIP = config.primary_ip;\nconst replicaIP = config.replica_ip;\n\n// Identify source\nlet isPrimary = (msg.ip === primaryIP);\nlet isReplica = (msg.ip === replicaIP);\n\n// 1. FILTER: Logic for what goes to the Sync Engine\n// We only want mutes/names, not heartbeats or faders\nconst isFader = msg.topic.includes(\"/fader\") || msg.topic.includes(\"/level\");\nconst isHeartbeatResponse = msg.topic === \"/info\" || msg.topic === \"/xremote\";\n\n// 2. ROUTING LOGIC\n// Output 1: Sync Traffic (No faders, no heartbeat responses)\nlet out1 = (isPrimary && !isFader && !isHeartbeatResponse) ? msg : null;\n\n// Output 2 & 3: Heartbeat Signal (Any valid packet from the IP counts as \"Life\")\nlet out2 = (isPrimary && isHeartbeatResponse) ? { payload: \"Online\" } : null;\nlet out3 = (isReplica && isHeartbeatResponse) ? { payload: \"Online\" } : null;\n\nreturn [out1, out2, out3];",
+        "func": "if (global.get(\"system_active\") === false) {\n    return [null, null, null]; // Drop incoming traffic\n}\n\nconst config = global.get('app_config') || {};\nconst primaryIP = config.primary_ip;\nconst replicaIP = config.replica_ip;\n\n// Identify source\nlet isPrimary = (msg.ip === primaryIP);\nlet isReplica = (msg.ip === replicaIP);\n\n// 1. FILTER: Logic for what goes to the Sync Engine\n// We only want mutes/names, not heartbeats or faders\nconst isFader = msg.topic.includes(\"/fader\") || msg.topic.includes(\"/level\");\nconst isHeartbeatResponse = msg.topic === \"/info\" || msg.topic === \"/xremote\";\n\n// 2. ROUTING LOGIC\n// Output 1: Sync Traffic (No faders, no heartbeat responses)\nlet out1 = (isPrimary && !isFader && !isHeartbeatResponse) ? msg : null;\n\n// Output 2 & 3: Heartbeat Signal (Any valid packet from the IP counts as \"Life\")\nlet out2 = (isPrimary && isHeartbeatResponse) ? { payload: \"Online\" } : null;\nlet out3 = (isReplica && isHeartbeatResponse) ? { payload: \"Online\" } : null;\n\nreturn [out1, out2, out3];",
         "outputs": 3,
         "timeout": 0,
         "noerr": 0,
@@ -883,6 +989,816 @@
         "wires": [
             [
                 "eaa81f7fe8a86ac3"
+            ]
+        ]
+    },
+    {
+        "id": "6d8058d6e96a3856",
+        "type": "debug",
+        "z": "045edc975e658572",
+        "name": "debug 1",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 400,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "5e8a01ffe6520bc5",
+        "type": "ui-text-input",
+        "z": "3c1a1c73431382ea",
+        "group": "ui-group-clean",
+        "name": "Primary Mixer IP",
+        "label": "Primary Mixer IP",
+        "order": 3,
+        "width": "",
+        "height": "",
+        "topic": "primary_ip",
+        "topicType": "str",
+        "mode": "text",
+        "tooltip": "",
+        "delay": "",
+        "passthru": true,
+        "sendOnDelay": true,
+        "sendOnBlur": true,
+        "sendOnEnter": true,
+        "className": "",
+        "clearable": false,
+        "sendOnClear": false,
+        "icon": "",
+        "iconPosition": "left",
+        "iconInnerPosition": "inside",
+        "x": 740,
+        "y": 280,
+        "wires": [
+            [
+                "cc69ceef8be15e5f"
+            ]
+        ]
+    },
+    {
+        "id": "6d37ebaccfb30d08",
+        "type": "ui-text-input",
+        "z": "3c1a1c73431382ea",
+        "group": "ui-group-clean",
+        "name": "Replica IP",
+        "label": "Replica Mixer IP",
+        "order": 5,
+        "width": "",
+        "height": "",
+        "topic": "replica_ip",
+        "topicType": "str",
+        "mode": "text",
+        "tooltip": "",
+        "delay": "",
+        "passthru": true,
+        "sendOnDelay": true,
+        "sendOnBlur": true,
+        "sendOnEnter": true,
+        "className": "",
+        "clearable": false,
+        "sendOnClear": false,
+        "icon": "",
+        "iconPosition": "left",
+        "iconInnerPosition": "inside",
+        "x": 730,
+        "y": 320,
+        "wires": [
+            [
+                "cc69ceef8be15e5f"
+            ]
+        ]
+    },
+    {
+        "id": "559a53207673ad50",
+        "type": "ui-text-input",
+        "z": "3c1a1c73431382ea",
+        "group": "ui-group-clean",
+        "name": "Safes",
+        "label": "Safe Substrings (Comma Separated)",
+        "order": 6,
+        "width": "",
+        "height": "",
+        "topic": "safe_names",
+        "topicType": "str",
+        "mode": "text",
+        "tooltip": "",
+        "delay": "",
+        "passthru": true,
+        "sendOnDelay": true,
+        "sendOnBlur": true,
+        "sendOnEnter": true,
+        "className": "",
+        "clearable": false,
+        "sendOnClear": false,
+        "icon": "",
+        "iconPosition": "left",
+        "iconInnerPosition": "inside",
+        "x": 710,
+        "y": 360,
+        "wires": [
+            [
+                "cc69ceef8be15e5f"
+            ]
+        ]
+    },
+    {
+        "id": "cc69ceef8be15e5f",
+        "type": "function",
+        "z": "3c1a1c73431382ea",
+        "name": "Sync & Persist",
+        "func": "let config = global.get(\"app_config\") || {};\n\n// 1. Capture the update from the Dashboard\nlet topic = msg.topic;\nlet payload = msg.payload;\n\n// 2. Map the data to the config object\n// Handle primary_ip, replica_ip, sim_mode, and safe_names\nconfig[topic] = payload;\n\n// 3. Update Global Memory\nglobal.set(\"app_config\", config);\n\n// 4. Update status so you can see the save happen\nnode.status({fill:\"blue\", shape:\"dot\", text:\"Updated: \" + topic});\n\n// 5. Pass the full object to the File node to save to disk\nmsg.payload = config;\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1040,
+        "y": 340,
+        "wires": [
+            [
+                "1120773cef765fe7"
+            ]
+        ]
+    },
+    {
+        "id": "1120773cef765fe7",
+        "type": "file",
+        "z": "3c1a1c73431382ea",
+        "name": "Save Config",
+        "filename": "${CONFIG_FILE_PATH}",
+        "filenameType": "str",
+        "appendNewline": true,
+        "createDir": true,
+        "overwriteFile": "true",
+        "x": 1220,
+        "y": 340,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "acaf52b92f7a10b3",
+        "type": "inject",
+        "z": "3c1a1c73431382ea",
+        "g": "9c240fe87b4f6f6f",
+        "name": "On Start",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "x": 140,
+        "y": 240,
+        "wires": [
+            [
+                "6fb1e959596744ba"
+            ]
+        ]
+    },
+    {
+        "id": "6fb1e959596744ba",
+        "type": "file in",
+        "z": "3c1a1c73431382ea",
+        "g": "9c240fe87b4f6f6f",
+        "name": "Read mixer_config.json",
+        "filename": "${CONFIG_FILE_PATH}",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "utf8",
+        "allProps": false,
+        "x": 380,
+        "y": 240,
+        "wires": [
+            [
+                "1f463f07f1d730d5"
+            ]
+        ]
+    },
+    {
+        "id": "1f463f07f1d730d5",
+        "type": "json",
+        "z": "3c1a1c73431382ea",
+        "g": "9c240fe87b4f6f6f",
+        "name": "Convert to Object",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 190,
+        "y": 340,
+        "wires": [
+            [
+                "1d4674254f4c81ac"
+            ]
+        ]
+    },
+    {
+        "id": "1d4674254f4c81ac",
+        "type": "function",
+        "z": "3c1a1c73431382ea",
+        "g": "9c240fe87b4f6f6f",
+        "name": "Populate Memory",
+        "func": "// 1. Get the data from the file\nlet config = msg.payload || {};\n\n// 3. Save the complete object (with defaults) to Global Memory\nglobal.set(\"app_config\", config);\n\n// 4. Prepare messages for Dashboard widgets\nlet primaryMsg  = { payload: config.primary_ip, topic: \"primary_ip\" };\nlet replicaMsg  = { payload: config.replica_ip, topic: \"replica_ip\" };\nlet safeMsg     = { payload: config.safe_names, topic: \"safe_names\" };\nlet simMsg      = { payload: config.sim_mode || false, topic: \"sim_mode\" };\n\nnode.status({fill:\"green\", shape:\"dot\", text:\"All Config Loaded\"});\n\n// CRITICAL: Return all 6 messages\nreturn [primaryMsg, replicaMsg, safeMsg, simMsg]",
+        "outputs": 4,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 470,
+        "y": 340,
+        "wires": [
+            [
+                "5e8a01ffe6520bc5"
+            ],
+            [
+                "6d37ebaccfb30d08"
+            ],
+            [
+                "559a53207673ad50"
+            ],
+            [
+                "5c3775420555addd"
+            ]
+        ]
+    },
+    {
+        "id": "8cb42a98670e40c7",
+        "type": "inject",
+        "z": "3c1a1c73431382ea",
+        "g": "7591be1e1d3c96e4",
+        "name": "Every 5s",
+        "props": [],
+        "repeat": "5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "x": 140,
+        "y": 560,
+        "wires": [
+            [
+                "31f2ab777587c863"
+            ]
+        ]
+    },
+    {
+        "id": "31f2ab777587c863",
+        "type": "function",
+        "z": "3c1a1c73431382ea",
+        "g": "7591be1e1d3c96e4",
+        "name": "Get IPs and Xremote Heartbeat",
+        "func": "if (global.get(\"system_active\") === false) {\n    node.status({fill:\"yellow\", shape:\"ring\", text:\"Standby\"});\n    return null;\n}\n\nconst config = global.get('app_config');\n\nif (!config || !config.primary_ip || !config.replica_ip) {\n    node.status({fill:\"red\", shape:\"ring\", text:\"Missing IPs\"});\n    return null;\n}\n\nconst SIM_MODE = (config.sim_mode === true || config.sim_mode === \"true\");\nlet messages = [];\n\n// 1. PRIMARY: Subscribe and Poll\nmessages.push({ topic: \"/xremote\", payload: [], ip: config.primary_ip, port: 10023 });\nmessages.push({ topic: \"/info\", payload: [], ip: config.primary_ip, port: 10023 });\n\n\n\n// 2. REPLICA: Poll only if not in Sim Mode\nif (!SIM_MODE) {\n    messages.push({ topic: \"/info\", payload: [], ip: config.replica_ip, port: 10023 });\n}\n\n\nnode.status({\n    fill: \"green\", \n    shape: \"dot\", \n    text: SIM_MODE ? \"Primary Active (Sim Mode)\" : \"Both Consoles Polled\"\n});\n\n/**\n * THE RETURN RULE:\n * [ Output1_Messages, Output2_Message ]\n * By passing the 'messages' array as the first element, Node-RED \n * will automatically \"burst\" them out as separate UDP packets.\n */\nreturn [messages];",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 560,
+        "wires": [
+            [
+                "223fe04efca6a85a"
+            ]
+        ]
+    },
+    {
+        "id": "223fe04efca6a85a",
+        "type": "link out",
+        "z": "3c1a1c73431382ea",
+        "g": "7591be1e1d3c96e4",
+        "name": "To_Primary_UDP",
+        "mode": "link",
+        "links": [
+            "716bd57ed6a71728"
+        ],
+        "x": 755,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "be38de1246053556",
+        "type": "function",
+        "z": "3c1a1c73431382ea",
+        "g": "aeb187c0ea7aedcf",
+        "name": "Query Primary Desk",
+        "func": "if (global.get(\"system_active\") === false) return null;\n\nconst config = global.get('app_config');\n\n// Safety Check: If config isn't loaded yet, don't send anything\nif (!config || !config.primary_ip) {\n    node.status({ fill: \"red\", shape: \"ring\", text: \"No Primary IP found\" });\n    return null;\n}\n\nconst PRIMARY_IP = config.primary_ip;\nconst PORT = 10023;\n\n// 1. Query all 32 Channels\nfor (let i = 1; i <= 32; i++) {\n    let ch = i.toString().padStart(2, '0');\n\n    // We send an object for each request\n    node.send({\n        topic: `/ch/${ch}/config/name`,\n        ip: PRIMARY_IP,\n        port: PORT\n    });\n    node.send({\n        topic: `/ch/${ch}/mix/on`,\n        ip: PRIMARY_IP,\n        port: PORT\n    });\n    node.send({\n        topic: `/ch/${ch}/grp/dca`,\n        ip: PRIMARY_IP,\n        port: PORT\n    });\n}\n\n// 2. Query all 8 DCAs\nfor (let j = 1; j <= 8; j++) {\n    node.send({\n        topic: `/dca/${j}/config/name`,\n        ip: PRIMARY_IP,\n        port: PORT\n    });\n    node.send({\n        topic: `/dca/${j}/on`,\n        ip: PRIMARY_IP,\n        port: PORT\n    });\n}\n\nnode.status({ fill: \"green\", shape: \"dot\", text: \"Querying Mixer...\" });\nreturn null;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 660,
+        "wires": [
+            [
+                "223fe04efca6a85a"
+            ]
+        ]
+    },
+    {
+        "id": "d7785e534acfcd67",
+        "type": "inject",
+        "z": "3c1a1c73431382ea",
+        "g": "aeb187c0ea7aedcf",
+        "name": "Sync All on Startup",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 2,
+        "topic": "",
+        "x": 170,
+        "y": 660,
+        "wires": [
+            [
+                "be38de1246053556"
+            ]
+        ]
+    },
+    {
+        "id": "5c3775420555addd",
+        "type": "ui-switch",
+        "z": "3c1a1c73431382ea",
+        "name": "Simulation Mode",
+        "label": "Simulation Mode (No Replica Mixer)",
+        "group": "ui-group-clean",
+        "order": 7,
+        "width": "",
+        "height": "",
+        "passthru": true,
+        "decouple": false,
+        "topic": "sim_mode",
+        "topicType": "str",
+        "className": "",
+        "layout": "",
+        "clickableArea": "line",
+        "onvalue": "true",
+        "onvalueType": "bool",
+        "onicon": "",
+        "oncolor": "",
+        "offvalue": "false",
+        "offvalueType": "bool",
+        "officon": "",
+        "offcolor": "",
+        "x": 750,
+        "y": 400,
+        "wires": [
+            [
+                "cc69ceef8be15e5f",
+                "15b2513eb870a2b7"
+            ]
+        ]
+    },
+    {
+        "id": "15b2513eb870a2b7",
+        "type": "link out",
+        "z": "3c1a1c73431382ea",
+        "name": "To_Replica_Status",
+        "mode": "link",
+        "links": [
+            "95865e0e625bbe4f"
+        ],
+        "x": 1015,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "f9f344e3d07e027f",
+        "type": "ui-switch",
+        "z": "3c1a1c73431382ea",
+        "name": "System Status: Standby / Active",
+        "label": "Standby/Active",
+        "group": "ui-group-clean",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "decouple": false,
+        "topic": "payload",
+        "topicType": "msg",
+        "style": "",
+        "className": "",
+        "layout": "row-spread",
+        "clickableArea": "line",
+        "onvalue": "true",
+        "onvalueType": "bool",
+        "onicon": "",
+        "oncolor": "",
+        "offvalue": "false",
+        "offvalueType": "bool",
+        "officon": "",
+        "offcolor": "",
+        "x": 790,
+        "y": 460,
+        "wires": [
+            [
+                "cfad64cbafee33f9"
+            ]
+        ]
+    },
+    {
+        "id": "cfad64cbafee33f9",
+        "type": "change",
+        "z": "3c1a1c73431382ea",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "system_active",
+                "pt": "global",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1090,
+        "y": 460,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "6c994da91c946887",
+        "type": "function",
+        "z": "acb1261afd28cef6",
+        "name": "Sync Logic Engine (Safes & Sim)",
+        "func": "const config = global.get(\"app_config\") || {};\nconst SIM_MODE = (config.sim_mode === true || config.sim_mode === \"true\");\nconst SAFE_NAMES = (config.safe_names || \"\").split(',').map(s => s.trim().toLowerCase());\nconst REPLICA_IP = config.replica_ip || \"127.0.0.1\";\n\nlet topic = msg.topic;\nlet payload = Array.isArray(msg.payload) ? msg.payload[0] : msg.payload;\n\n// --- RBE (REPORT BY EXCEPTION) ---\nlet lastKnownValue = context.get(topic);\nif (lastKnownValue !== undefined && lastKnownValue === payload) return null;\ncontext.set(topic, payload);\n\nfunction cleanOSC(input) {\n    return (typeof input === 'string') ? input.replace(/\\0/g, '').trim() : input;\n}\n\n// Prepare a metadata object for the Audit Log\nmsg.audit = { status: \"Synced\", detail: \"\" };\n\n// 2. LOGIC\nif (topic.startsWith(\"/ch/\")) {\n    let chIndex = topic.split('/')[2];\n    let key = `ch_${chIndex}_name`;\n\n    if (topic.endsWith(\"/config/name\")) {\n        let newName = cleanOSC(payload);\n        global.set(key, newName);\n        msg.payload = { type: \"s\", value: newName };\n        msg.audit.detail = newName;\n    } \n    else if (topic.endsWith(\"/mix/on\")) {\n        let currentName = (global.get(key) || \"\").toLowerCase();\n        let isSafe = SAFE_NAMES.some(word => word && currentName.includes(word));\n        \n        if (isSafe) {\n            msg.audit.status = \"BLOCKED (Safe)\";\n            msg.audit.detail = (global.get(key) || \"Unknown\");\n            // Send ONLY to the Audit Log (Output 2)\n            return [null, msg]; \n        }\n        msg.payload = { type: \"i\", value: parseInt(payload) };\n        msg.audit.detail = (global.get(key) || chIndex);\n    }\n    else if (topic.endsWith(\"/grp/dca\")) {\n        msg.payload = { type: \"i\", value: parseInt(payload) };\n        msg.audit.detail = \"Bitmask: \" + payload;\n    }\n} \nelse if (topic.startsWith(\"/dca/\")) {\n    msg.payload = (topic.endsWith(\"/on\")) ? { type: \"i\", value: parseInt(payload) } : { type: \"s\", value: cleanOSC(payload) };\n    msg.audit.detail = \"DCA Master\";\n}\n\n// 3. ROUTING\nmsg.ip = REPLICA_IP;\nmsg.port = 10023;\n\nif (SIM_MODE) {\n    msg.audit.status = \"Simulated\";\n    return [null, msg]; // Only to Audit Log\n} else {\n    // Return [To OSC, To Audit Log]\n    // We send a copy to the log so it can see the final state\n    return [msg, RED.util.cloneMessage(msg)]; \n}",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1000,
+        "y": 140,
+        "wires": [
+            [
+                "d792d79a66774712",
+                "506ff1f2af4cc53e"
+            ],
+            [
+                "3bfd33bfcf7725e5"
+            ]
+        ]
+    },
+    {
+        "id": "46fbd903a190fa8a",
+        "type": "osc",
+        "z": "acb1261afd28cef6",
+        "name": "OSC Decode",
+        "x": 250,
+        "y": 160,
+        "wires": [
+            [
+                "06480be5601e06b2"
+            ]
+        ]
+    },
+    {
+        "id": "cb01543bea606512",
+        "type": "udp in",
+        "z": "acb1261afd28cef6",
+        "name": "From Primary",
+        "iface": "",
+        "port": "10023",
+        "ipv": "udp4",
+        "multicast": "false",
+        "group": "",
+        "x": 90,
+        "y": 160,
+        "wires": [
+            [
+                "46fbd903a190fa8a"
+            ]
+        ]
+    },
+    {
+        "id": "c25e74baf5bf4f16",
+        "type": "udp out",
+        "z": "acb1261afd28cef6",
+        "name": "To Replica",
+        "addr": "",
+        "iface": "",
+        "port": "10023",
+        "ipv": "udp4",
+        "outport": "",
+        "base64": false,
+        "x": 1450,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "716bd57ed6a71728",
+        "type": "link in",
+        "z": "acb1261afd28cef6",
+        "name": "Link from Mixer Config",
+        "links": [
+            "223fe04efca6a85a"
+        ],
+        "x": 635,
+        "y": 40,
+        "wires": [
+            [
+                "6a261fedea236b7e",
+                "e54a3854523ee821"
+            ]
+        ]
+    },
+    {
+        "id": "d792d79a66774712",
+        "type": "osc",
+        "z": "acb1261afd28cef6",
+        "name": "OSC Encode",
+        "path": "",
+        "metadata": true,
+        "x": 1270,
+        "y": 120,
+        "wires": [
+            [
+                "c25e74baf5bf4f16"
+            ]
+        ]
+    },
+    {
+        "id": "0edd9e3903b8588d",
+        "type": "udp out",
+        "z": "acb1261afd28cef6",
+        "name": "To Primary (Query)",
+        "addr": "",
+        "iface": "",
+        "port": "10023",
+        "ipv": "udp4",
+        "outport": "",
+        "base64": false,
+        "x": 1190,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "3bfd33bfcf7725e5",
+        "type": "debug",
+        "z": "acb1261afd28cef6",
+        "name": "Audit log",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1260,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "6a261fedea236b7e",
+        "type": "debug",
+        "z": "acb1261afd28cef6",
+        "name": "Heartbeat and Startup output",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 820,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "5b3dc23660896ee8",
+        "type": "switch",
+        "z": "acb1261afd28cef6",
+        "name": "Use only Primary Mixer traffic",
+        "property": "app_config.primary_ip",
+        "propertyType": "global",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "ip",
+                "vt": "msg"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 720,
+        "y": 140,
+        "wires": [
+            [
+                "6c994da91c946887"
+            ]
+        ]
+    },
+    {
+        "id": "e54a3854523ee821",
+        "type": "osc",
+        "z": "acb1261afd28cef6",
+        "name": "OSC Encode (Query)",
+        "path": "",
+        "metadata": true,
+        "x": 980,
+        "y": 40,
+        "wires": [
+            [
+                "0edd9e3903b8588d"
+            ]
+        ]
+    },
+    {
+        "id": "06480be5601e06b2",
+        "type": "function",
+        "z": "acb1261afd28cef6",
+        "name": "Network Router",
+        "func": "if (global.get(\"system_active\") === false) return [null, null, null];\n\nconst config = global.get('app_config') || {};\nconst primaryIP = config.primary_ip;\nconst replicaIP = config.replica_ip;\n\n// Identify source\nlet isPrimary = (msg.ip === primaryIP);\nlet isReplica = (msg.ip === replicaIP);\n\n// 1. FILTER: Logic for what goes to the Sync Engine\n// We only want mutes/names, not heartbeats or faders\nconst isFader = msg.topic.includes(\"/fader\") || msg.topic.includes(\"/level\");\nconst isHeartbeatResponse = msg.topic === \"/info\" || msg.topic === \"/xremote\";\n\n// 2. ROUTING LOGIC\n// Output 1: Sync Traffic (No faders, no heartbeat responses)\nlet out1 = (isPrimary && !isFader && !isHeartbeatResponse) ? msg : null;\n\n// Output 2 & 3: Heartbeat Signal (Any valid packet from the IP counts as \"Life\")\nlet out2 = (isPrimary && isHeartbeatResponse) ? { payload: \"Online\" } : null;\nlet out3 = (isReplica && isHeartbeatResponse) ? { payload: \"Online\" } : null;\n\nreturn [out1, out2, out3];",
+        "outputs": 3,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 160,
+        "wires": [
+            [
+                "5b3dc23660896ee8"
+            ],
+            [
+                "cf59324e9d684603"
+            ],
+            [
+                "720f77a6412864fc"
+            ]
+        ]
+    },
+    {
+        "id": "8509c38990ba01dd",
+        "type": "ui-text",
+        "z": "acb1261afd28cef6",
+        "group": "ui-group-clean",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "name": "Primary Status",
+        "label": "Primary Audio Console Status:",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "wrapText": false,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 1200,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "8797f26951386763",
+        "type": "ui-text",
+        "z": "acb1261afd28cef6",
+        "group": "ui-group-clean",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "name": "Replica Status",
+        "label": "Replica Audio Console Status:",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "wrapText": false,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 1200,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "cf59324e9d684603",
+        "type": "trigger",
+        "z": "acb1261afd28cef6",
+        "name": "Primary Mixer Status",
+        "op1": "Online",
+        "op2": "Offline",
+        "op1type": "str",
+        "op2type": "str",
+        "duration": "10",
+        "extend": true,
+        "overrideDelay": false,
+        "units": "s",
+        "reset": "",
+        "bytopic": "all",
+        "topic": "topic",
+        "outputs": 1,
+        "x": 720,
+        "y": 260,
+        "wires": [
+            [
+                "8509c38990ba01dd"
+            ]
+        ]
+    },
+    {
+        "id": "506ff1f2af4cc53e",
+        "type": "debug",
+        "z": "acb1261afd28cef6",
+        "name": "Send to Replica",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1280,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "411526f3c84743c2",
+        "type": "function",
+        "z": "acb1261afd28cef6",
+        "name": "Online/Offline/Simulation",
+        "func": "const config = global.get(\"app_config\") || {};\nconst SIM_MODE = (config.sim_mode === true || config.sim_mode === \"true\");\n\n// Use Context memory to remember the last state from the Trigger\nlet lastMixerState = context.get(\"lastMixerState\") || \"Offline\";\n\n// If the message came from the Trigger, update our memory\nif (msg.payload === \"Online\" || msg.payload === \"Offline\") {\n    lastMixerState = msg.payload;\n    context.set(\"lastMixerState\", lastMixerState);\n}\n\n// FINAL LOGIC HIERARCHY\nif (lastMixerState === \"Online\") {\n    // Hardware is actually there! Hardware always wins.\n    msg.payload = \"Online\";\n} else {\n    // Hardware is missing. Show Simulated if mode is active.\n    msg.payload = SIM_MODE ? \"Simulated Mode\" : \"Offline\";\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 970,
+        "y": 320,
+        "wires": [
+            [
+                "8797f26951386763"
+            ]
+        ]
+    },
+    {
+        "id": "720f77a6412864fc",
+        "type": "trigger",
+        "z": "acb1261afd28cef6",
+        "name": "Replica Mixer Status",
+        "op1": "",
+        "op2": "Offline",
+        "op1type": "pay",
+        "op2type": "str",
+        "duration": "10",
+        "extend": true,
+        "overrideDelay": false,
+        "units": "s",
+        "reset": "",
+        "bytopic": "all",
+        "topic": "topic",
+        "outputs": 1,
+        "x": 720,
+        "y": 320,
+        "wires": [
+            [
+                "411526f3c84743c2"
+            ]
+        ]
+    },
+    {
+        "id": "95865e0e625bbe4f",
+        "type": "link in",
+        "z": "acb1261afd28cef6",
+        "name": "To_Replica_Status",
+        "links": [
+            "15b2513eb870a2b7"
+        ],
+        "x": 785,
+        "y": 380,
+        "wires": [
+            [
+                "411526f3c84743c2"
             ]
         ]
     }
