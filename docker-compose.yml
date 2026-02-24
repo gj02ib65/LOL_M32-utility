@@ -14,5 +14,18 @@
     environment:
       - TZ=America/Chicago
       - CONFIG_FILE_PATH=/data/mixer_config.json # Your new variable
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: always
+    security_opt:
+      - label=disable # Required for Podman to allow root socket access
+    volumes:
+      # Use :z to satisfy Podman SELinux requirements. If using Rootless Podman on Linux, change to: /run/user/1000/podman/podman.sock:/var/run/docker.sock:z
+      - /var/run/docker.sock:/var/run/docker.sock:z
+    # Check for updates every Monday at 3 AM
+    command: --schedule "0 0 3 * * 1" --cleanup m32-sync-utility
+
 volumes:
   m32_church_data: # This creates a permanent internal drive
