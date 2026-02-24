@@ -40,7 +40,13 @@ The system is built on a high-performance **UDP/OSC Routing Engine** designed to
 
 ## 🚢 Installation & Deployment
 
-For end-users who simply want to run the utility without modifying the source code, the easiest method is to use Docker/Podman with the pre-built image.
+> [!WARNING]
+> **Platform Compatibility (macOS UDP Limitation)**
+> Because the Behringer X32/M32 strictly replies to the precise UDP source port that initiates a query (`/xremote`), this application relies on strict UDP socket binding.
+> - **Linux & Windows (WSL2):** Fully supported via Docker or Podman using `network_mode: "host"`.
+> - **macOS:** **Not supported via Docker/Podman.** macOS Docker/Podman utilizes a hidden Virtual Machine that forcefully masquerades UDP source ports via NAT, causing the mixer's return packets to be dropped by the firewall. Mac users must run Node-RED natively instead of using containers.
+
+For Linux or Windows users who simply want to run the utility without modifying the source code, the easiest method is to use Docker/Podman with the pre-built image.
 
 1. **Install Docker or Podman** on your server/computer.
 2. **Create a `docker-compose.yml` file** with the following content:
