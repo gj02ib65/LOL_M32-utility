@@ -11,6 +11,7 @@ tasks:
       - echo "Pulling live flows from {{.CONTAINER_NAME}}..."
       - podman cp {{.CONTAINER_NAME}}:/data/flows.json {{.SRC_DIR}}/flows.json
       - podman cp {{.CONTAINER_NAME}}:/data/package.json {{.SRC_DIR}}/package.json
+      - podman cp {{.CONTAINER_NAME}}:/data/mixer_config.json {{.SRC_DIR}}/mixer_config.json
       - echo "Done! You can now 'git add src/flows.json' to save your changes."
 
   build:
@@ -26,6 +27,11 @@ tasks:
       - podman ps --filter name={{.CONTAINER_NAME}}
       - echo "--- Current App Config ---"
       - podman exec {{.CONTAINER_NAME}} cat /data/mixer_config.json
+
+  down:
+    desc: Stops and removes the container.
+    cmds:
+      - podman compose down
   
   logs:
     desc: Follow the live logs from the mixer sync engine.

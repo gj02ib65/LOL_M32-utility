@@ -16,8 +16,8 @@ USER node-red
 
 # 4. Install the Node-RED packages
 RUN npm install @flowfuse/node-red-dashboard \
-                node-red-contrib-osc 
-                
+    node-red-contrib-osc 
+
 COPY --chown=node-red:node-red ./src/flows.json /data/flows.json
 COPY --chown=node-red:node-red ./src/package.json /data/package.json
-COPY --chown=node-red:node-red ./data/mixer_config.json /data/mixer_config.json
+COPY --chown=node-red:node-red ./src/mixer_config.json /data/mixer_config.json

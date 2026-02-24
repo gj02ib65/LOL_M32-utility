@@ -1,0 +1,26 @@
+services:
+  m32-sync:
+    image: ghcr.io/gj02ib65/lol_m32-utility:latest
+    container_name: m32-sync-utility
+    restart: always
+    network_mode: "host"
+    ports:
+      - "1880:1880"
+      - "10023:10023/udp"
+    volumes:
+      - m32_church_data:/data
+    environment:
+      - TZ=America/Chicago
+      - CONFIG_FILE_PATH=/data/mixer_config.json
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    # Check for updates every Monday at 3 AM
+    command: --schedule "0 0 3 * * 1" --cleanup m32-sync-utility
+
+volumes:
+  m32_church_data:

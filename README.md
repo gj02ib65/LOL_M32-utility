@@ -38,6 +38,68 @@ The system is built on a high-performance **UDP/OSC Routing Engine** designed to
 
 ---
 
+## 🚢 Installation & Deployment
+
+For end-users who simply want to run the utility without modifying the source code, the easiest method is to use Docker/Podman with the pre-built image.
+
+1. **Install Docker or Podman** on your server/computer.
+2. **Create a `docker-compose.yml` file** with the following content:
+
+```yaml
+services:
+  m32-sync:
+    image: ghcr.io/gj02ib65/lol_m32-utility:latest
+    container_name: m32-sync-utility
+    restart: always
+    network_mode: "host" 
+    ports:
+      - "1880:1880"
+      - "10023:10023/udp"
+    volumes:
+      - m32_church_data:/data 
+    environment:
+      - TZ=America/Chicago
+
+  # Optional: Watchtower automatically applies monthly security updates
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --schedule "0 0 3 * * 1" --cleanup m32-sync-utility
+
+volumes:
+  m32_church_data: 
+```
+
+3. **Run the application**: Open your terminal in the same folder as the file and run `docker compose up -d` (or `podman compose up -d`).
+4. **Access the Dashboard**: Open your web browser and navigate to `http://localhost:1880/dashboard/mixer`.
+
+*(Developers: See the developer section below for instructions on building from source.)*
+
+---
+
+## 💻 Developer Instructions (Building from Source)
+
+If you wish to modify the Node-RED flow (`src/flows.json`), you will want to build the container locally. This project utilizes [Task](https://taskfile.dev/) (also known as `go-task`) to run local build and sync scripts.
+
+### 1. Install Task (`go-task`)
+Depending on your platform, install the Task runner:
+- **Windows (Scoop):** `scoop install task`
+- **macOS (Homebrew):** `brew install go-task`
+- **Linux:** [See installation guide](https://taskfile.dev/installation/)
+
+### 2. Available Commands
+You can run the following commands from the root directory:
+- `task build` -> Rebuilds the container locally using the source files in `/src`.
+- `task up` / `task down` -> Start or stop the local development container.
+- `task status` -> Check container health and the currently loaded config.
+- `task logs` -> Follow the live container logs.
+- `task pull` -> Syncs the live `flows.json` and `package.json` from your running container back into your local `/src` Git repository.
+
+---
+
 ## ⚙️ Usage Configuration
 
 1. **Primary IP:** The address of your FOH Console.
