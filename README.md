@@ -57,26 +57,30 @@ services:
     image: ghcr.io/gj02ib65/lol_m32-utility:latest
     container_name: m32-sync-utility
     restart: always
-    network_mode: "host" 
+    network_mode: "host"
     ports:
       - "1880:1880"
       - "10023:10023/udp"
     volumes:
-      - m32_church_data:/data 
+      - m32_church_data:/data
     environment:
       - TZ=America/Chicago
+      - CONFIG_FILE_PATH=/data/mixer_config.json
 
-  # Optional: Watchtower automatically applies monthly security updates
   watchtower:
     image: containrrr/watchtower
     container_name: watchtower
     restart: always
+    security_opt:
+      - label=disable # Required for Podman to allow root socket access
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      # Use :z to satisfy Podman SELinux requirements. If using Rootless Podman on Linux, change to: /run/user/1000/podman/podman.sock:/var/run/docker.sock:z
+      - /var/run/docker.sock:/var/run/docker.sock:z
+    # Check for updates every Monday at 3 AM
     command: --schedule "0 0 3 * * 1" --cleanup m32-sync-utility
 
 volumes:
-  m32_church_data: 
+  m32_church_data:
 ```
 
 3. **Run the application**: Open your terminal in the same folder as the file and run `docker compose up -d` (or `podman compose up -d`).
