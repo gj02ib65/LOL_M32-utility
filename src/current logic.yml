@@ -1,0 +1,49 @@
+const config = global.get("app_config") || {};
+const SIM_MODE = (config.sim_mode === true || config.sim_mode === "true");
+const REPLICA_IP = config.replica_ip || "127.0.0.1";
+
+// Improved Safe List parsing
+const SAFE_NAMES = (config.safe_names || "")
+    .split(',')
+    .map(s => s.trim().toLowerCase())
+    .filter(s => s.length > 0); // Remove empty entries
+
+let topic = msg.topic;
+let payload = Array.isArray(msg.payload) ? msg.payload[0] : msg.payload;
+
+function cleanOSC(input) {
+    return (typeof input === 'string') ? input.replace(/\0/g, '').trim() : input;
+}
+
+// 1. LOGIC
+if (topic.startsWith("/ch/")) {
+    let chIndex = topic.split('/')[2];
+    let key = `ch_${chIndex}_name`;
+
+    if (topic.endsWith("/config/name")) {
+        let newName = cleanOSC(payload);
+        global.set(key, newName);
+        msg.payload = { type: "s", value: newName };
+    } 
+    else if (topic.endsWith("/mix/on")) {
+        let currentName = (global.get(key) || "CH " + chIndex).toLowerCase();
+        let isSafe = SAFE_NAMES.some(word => word && currentName.includes(word));
+        
+        if (isSafe) {
+            node.status({fill:"yellow", shape:"ring", text: "Safe: " + currentName});
+            return [null, { audit: { status: "BLOCKED", detail: currentName } }]; 
+        }
+        msg.payload = { type: "i", value: parseInt(payload) };
+    }
+} 
+// ... (Rest of DCA logic remains the same)
+
+// 2. ROUTING
+msg.ip = REPLICA_IP;
+msg.port = 10023;
+
+if (SIM_MODE) {
+    return [null, msg];
+} else {
+    return [msg, RED.util.cloneMessage(msg)]; 
+}
