@@ -3,21 +3,28 @@
 # 1. Switch to root to install system dependencies
 USER root
 
-# 2. Install ALSA headers and build tools
-# 'build-base': Contains gcc/g++/make required to compile the C++ code
+# 2. Install build tools and python (needed for certain node compilations)
 RUN apk add --no-cache build-base python3 
-# tcpdump doas
-# RUN adduser -D -s /bin/sh node-red
-# RUN mkdir -p /etc/doas.d && \
-#     echo "permit nopass node-red as root" > /etc/doas.d/doas.conf
-# 3. Switch back to the node-red user
+
+# 3. Set the environment variable for your custom config location
 ENV CONFIG_FILE_PATH=/data/mixer_config.json
+
+# 4. Set the working directory to the standard Node-RED app folder
+WORKDIR /usr/src/node-red
+
+# 5. Copy the Logic files to the internal App folder (NOT /data)
+# This ensures these files are part of the image layers and not hidden by volumes
+COPY --chown=node-red:node-red ./src/package.json ./package.json
+COPY --chown=node-red:node-red ./src/flows.json ./flows.json
+
+# 6. Switch back to the node-red user to install packages
 USER node-red
 
-# 4. Install the Node-RED packages
+# 7. Install your specific palettes into the App folder
 RUN npm install @flowfuse/node-red-dashboard \
     node-red-contrib-osc 
 
-COPY --chown=node-red:node-red ./src/flows.json /data/flows.json
-COPY --chown=node-red:node-red ./src/package.json /data/package.json
+# 8. Copy the TEMPLATE config to /data
+# Note: This will only be used if the volume is empty. 
+# Once a volume exists at the church, this line is effectively ignored by Podman.
 COPY --chown=node-red:node-red ./src/mixer_config.json /data/mixer_config.json
