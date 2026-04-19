@@ -3,19 +3,20 @@ services:
     image: ghcr.io/gj02ib65/lol_m32-utility:latest
     container_name: m32-sync-utility
     restart: always
-    network_mode: "host"
+    network_mode: "host" # Disabled for macOS testing. Required on Linux production for zero-latency UDP.
     ports:
       - "1880:1880"
       - "10023:10023/udp"
     volumes:
-      - m32_church_data:/data
+      - m32_church_data:/data # Podman handles all permissions here
     environment:
       - TZ=America/Chicago
       - NODE_RED_ENABLE_PROJECTS=false
-      # Use your baked-in folder for the user data (flows/nodes)
+      # THIS LINE IS THE FIX:
       - NODE_RED_USER_DIR=/opt/m32-logic
+      # This tells it which file to load:
       - FLOWS=/opt/m32-logic/flows.json
-      # Use the volume for the mixer settings
+      # This tells your code where to find the IPs:
       - CONFIG_FILE_PATH=/data/mixer_config.json
 
   watchtower:
@@ -31,4 +32,4 @@ services:
     command: --schedule "0 0 3 * * 1" --cleanup m32-sync-utility
 
 volumes:
-  m32_church_data:
+  m32_church_data: # This creates a permanent internal drive
