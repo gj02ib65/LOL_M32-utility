@@ -11,8 +11,12 @@ services:
       - m32_church_data:/data
     environment:
       - TZ=America/Chicago
-      - CONFIG_FILE_PATH=/data/mixer_config.json # Your new variable
+      - NODE_RED_ENABLE_PROJECTS=false
+      # Use your baked-in folder for the user data (flows/nodes)
+      - NODE_RED_USER_DIR=/opt/m32-logic
       - FLOWS=/opt/m32-logic/flows.json
+      # Use the volume for the mixer settings
+      - CONFIG_FILE_PATH=/data/mixer_config.json
 
   watchtower:
     image: containrrr/watchtower
