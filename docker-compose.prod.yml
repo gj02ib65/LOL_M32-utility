@@ -12,8 +12,8 @@ services:
     environment:
       - TZ=America/Chicago
       - NODE_RED_ENABLE_PROJECTS=false
-      # THIS LINE IS THE FIX:
-      - NODE_RED_USER_DIR=/opt/m32-logic
+      # Force Node.js to find our baked-in palettes
+      - NODE_PATH=/opt/m32-logic/node_modules
       # This tells it which file to load:
       - FLOWS=/opt/m32-logic/flows.json
       # This tells your code where to find the IPs:
