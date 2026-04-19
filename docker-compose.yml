@@ -14,7 +14,7 @@
     environment:
       - TZ=America/Chicago
       - CONFIG_FILE_PATH=/data/mixer_config.json # Your new variable
-      - FLOWS=/usr/src/node-red/flows.json
+      - FLOWS=/opt/m32-logic/flows.json
 
   watchtower:
     image: containrrr/watchtower

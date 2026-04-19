@@ -9,13 +9,12 @@ tasks:
     desc: Syncs the "live" flows from the app path and config from the data volume.
     cmds:
       - echo "Pulling live flows and config..."
-      # Pull flows from the application directory (The Logic)
-      - podman cp {{.CONTAINER_NAME}}:/usr/src/node-red/flows.json {{.SRC_DIR}}/flows.json
-      # Pull package.json (The Plugins)
-      - podman cp {{.CONTAINER_NAME}}:/usr/src/node-red/package.json {{.SRC_DIR}}/package.json
-      # Pull mixer_config.json from the volume (The Church Settings)
+      # Pull from the new logic directory
+      - podman cp {{.CONTAINER_NAME}}:/opt/m32-logic/flows.json {{.SRC_DIR}}/flows.json
+      - podman cp {{.CONTAINER_NAME}}:/opt/m32-logic/package.json {{.SRC_DIR}}/package.json
+      # Pull mixer_config from the persistent volume
       - podman cp {{.CONTAINER_NAME}}:/data/mixer_config.json {{.SRC_DIR}}/mixer_config.json
-      - echo "Done! You can now commit to GitHub."
+      - echo "Done! Ready for Git."
 
   build:
     desc: Rebuilds the container image locally using the Dockerfile in /containers/app.
