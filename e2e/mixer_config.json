@@ -1,0 +1,6 @@
+{
+    "primary_ip": "172.28.0.3",
+    "replica_ip": "172.28.0.3",
+    "safe_names": "ambient, talkback, stop",
+    "sim_mode": false
+}

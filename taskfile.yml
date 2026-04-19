@@ -17,8 +17,8 @@ tasks:
   build:
     desc: Rebuilds the container image locally using the Dockerfile in /containers/app.
     cmds:
-      - podman compose build 
-      - podman compose up -d
+      - podman-compose -f docker-compose.prod.yml pull 
+      - podman-compose -f docker-compose.prod.yml up -d
       - task: status
 
   status:
@@ -31,7 +31,7 @@ tasks:
   down:
     desc: Stops and removes the container.
     cmds:
-      - podman compose down
+      - podman-compose -f docker-compose.prod.yml down
   
   logs:
     desc: Follow the live logs from the mixer sync engine.

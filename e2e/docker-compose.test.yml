@@ -1,0 +1,33 @@
+services:
+  m32app:
+    image: ghcr.io/gj02ib65/lol_m32-utility:latest
+    container_name: m32-sync-utility-test
+    environment:
+      - TZ=America/Chicago
+      - CONFIG_FILE_PATH=/data/mixer_config.json
+    volumes:
+      - ./mixer_config.json:/data/mixer_config.json:ro
+      - ../src/flows.json:/data/flows.json:ro
+    networks:
+      testing:
+        ipv4_address: 172.28.0.2
+
+  tester:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: m32-sync-tester
+    depends_on:
+      - m32app
+    environment:
+      - TARGET_IP=172.28.0.2
+      - TARGET_PORT=10023
+    networks:
+      testing:
+        ipv4_address: 172.28.0.3
+
+networks:
+  testing:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
