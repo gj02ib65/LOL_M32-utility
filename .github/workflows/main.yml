@@ -7,8 +7,10 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - 'src/**'
-      - 'containers/**'
+      - 'src/package.json'   # palette dependency changes require a new image
+      - 'containers/**'      # Dockerfile or runtime changes require a new image
+      # Note: flows.json is NO LONGER baked into the image.
+      # Flow changes live in the separate lol_m32-flows repo and never trigger a rebuild.
   workflow_dispatch:
     # Allows you to manually trigger a build from the Actions tab
 

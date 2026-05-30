@@ -49,7 +49,15 @@ The system is built on a high-performance **UDP/OSC Routing Engine** designed to
 For Linux or Windows users who simply want to run the utility without modifying the source code, the easiest method is to use Docker/Podman with the pre-built image.
 
 1. **Install Docker or Podman** on your server/computer.
-2. **Create a `docker-compose.yml` file** with the following content:
+
+2. **Clone the flows repository** to a known location on the host:
+
+```powershell
+# Windows (PowerShell)
+git clone https://github.com/gj02ib65/lol_m32-flows.git C:\m32-flows
+```
+
+3. **Create a `docker-compose.yml` file** with the following content:
 
 ```yaml
 services:
@@ -63,8 +71,14 @@ services:
       - "10023:10023/udp"
     volumes:
       - m32_church_data:/data
+      # Bind-mount the flows from the cloned lol_m32-flows repo.
+      # Update this path if you cloned to a different location.
+      - C:\m32-flows\flows.json:/opt/m32-logic/flows.json:ro
     environment:
       - TZ=America/Chicago
+      - NODE_RED_ENABLE_PROJECTS=false
+      - NODE_PATH=/opt/m32-logic/node_modules
+      - FLOWS=/opt/m32-logic/flows.json
       - CONFIG_FILE_PATH=/data/mixer_config.json
 
   watchtower:
@@ -74,7 +88,6 @@ services:
     security_opt:
       - label=disable # Required for Podman to allow root socket access
     volumes:
-      # Use :z to satisfy Podman SELinux requirements. If using Rootless Podman on Linux, change to: /run/user/1000/podman/podman.sock:/var/run/docker.sock:z
       - /var/run/docker.sock:/var/run/docker.sock:z
     # Check for updates every Monday at 3 AM
     command: --schedule "0 0 3 * * 1" --cleanup m32-sync-utility
@@ -83,8 +96,11 @@ volumes:
   m32_church_data:
 ```
 
-3. **Run the application**: Open your terminal in the same folder as the file and run `docker compose up -d` (or `podman compose up -d`).
-4. **Access the Dashboard**: Open your web browser and navigate to `http://localhost:1880/dashboard/mixer`.
+4. **Run the application**: Open your terminal in the same folder as the file and run `docker compose up -d` (or `podman compose up -d`).
+
+5. **Set up automatic flow updates**: Follow the instructions in the [lol_m32-flows README](https://github.com/gj02ib65/lol_m32-flows) to install the Windows Scheduled Task. Once done, any flow update pushed to GitHub will be live at church within 15 minutes — automatically.
+
+6. **Access the Dashboard**: Open your web browser and navigate to `http://localhost:1880/dashboard/mixer`.
 
 *(Developers: See the developer section below for instructions on building from source.)*
 
@@ -92,7 +108,9 @@ volumes:
 
 ## 💻 Developer Instructions (Building from Source)
 
-If you wish to modify the Node-RED flow (`src/flows.json`), you will want to build the container locally. This project utilizes [Task](https://taskfile.dev/) (also known as `go-task`) to run local build and sync scripts.
+If you wish to modify the Node-RED flow (`flows.json`), note that **flows now live in the separate [lol_m32-flows](https://github.com/gj02ib65/lol_m32-flows) repository**. Clone that repo to make flow changes. The `m32-utility` repo only needs to be rebuilt when npm palette dependencies (`src/package.json`) or the Dockerfile change.
+
+This project utilizes [Task](https://taskfile.dev/) (also known as `go-task`) to run local build and sync scripts.
 
 ### 1. Install Task (`go-task`)
 Depending on your platform, install the Task runner:

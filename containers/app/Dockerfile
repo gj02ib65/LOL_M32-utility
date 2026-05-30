@@ -1,4 +1,4 @@
-﻿FROM nodered/node-red:latest-22
+FROM nodered/node-red:latest-22
 
 USER root
 # Install system tools
@@ -8,9 +8,11 @@ RUN apk add --no-cache alsa-lib-dev build-base python3 tcpdump
 RUN mkdir -p /opt/m32-logic && chown -R node-red:node-red /opt/m32-logic
 WORKDIR /opt/m32-logic
 
-# 2. Copy logic files
+# 2. Copy palette dependency list and create a fallback empty flows file.
+#    flows.json itself is NOT baked in — it is mounted from the host at runtime
+#    via docker-compose so that flow changes never require an image rebuild.
 COPY --chown=node-red:node-red ./src/package.json ./package.json
-COPY --chown=node-red:node-red ./src/flows.json ./flows.json
+RUN echo '[]' > /opt/m32-logic/flows.json && chown node-red:node-red /opt/m32-logic/flows.json
 
 USER node-red
 

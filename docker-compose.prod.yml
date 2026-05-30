@@ -9,6 +9,10 @@ services:
       - "10023:10023/udp"
     volumes:
       - m32_church_data:/data # Podman handles all permissions here
+      # flows.json is mounted from the host's cloned m32-flows repo.
+      # Update the path below if you cloned to a different location.
+      # To update flows: just push to the m32-flows GitHub repo — the host auto-pulls every 15 min.
+      - C:\m32-flows\flows.json:/opt/m32-logic/flows.json:ro
     environment:
       - TZ=America/Chicago
       - NODE_RED_ENABLE_PROJECTS=false
