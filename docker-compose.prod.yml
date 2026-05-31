@@ -9,19 +9,18 @@ services:
       - "10023:10023/udp"
     volumes:
       - m32_church_data:/data # Podman handles all permissions here
-      # flows.json is mounted from the host's cloned m32-flows repo.
-      # Update the path below if you cloned to a different location.
-      # To update flows: just push to the m32-flows GitHub repo — the host auto-pulls every 15 min.
-      - C:\m32-flows\flows.json:/opt/m32-logic/flows.json:ro
+      # The lol_m32-flows repo directory is mounted read-only as the flows SOURCE.
+      # A startup script copies flows.json into /data/ at container start.
+      # Mounting the directory (not the file directly) avoids Node-RED's EBUSY
+      # rename error when it tries to atomically save the flows file.
+      - ../m32-flows:/opt/m32-flows-src:ro
     environment:
       - TZ=America/Chicago
       - NODE_RED_ENABLE_PROJECTS=false
-      # Force Node.js to find our baked-in palettes
-      - NODE_PATH=/opt/m32-logic/node_modules
-      # This tells it which file to load:
-      - FLOWS=/opt/m32-logic/flows.json
       # This tells your code where to find the IPs:
       - CONFIG_FILE_PATH=/data/mixer_config.json
+    # Pass the custom settings file so Node-RED loads our nodesDir configuration.
+    command: --settings /opt/m32-logic/settings.js
 
   watchtower:
     image: containrrr/watchtower

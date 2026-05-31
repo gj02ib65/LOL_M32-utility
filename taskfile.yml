@@ -6,21 +6,22 @@ vars:
 
 tasks:
   pull:
-    desc: Syncs the "live" flows from the app path and config from the data volume.
+    desc: Syncs the "live" flows and config from the running container back to source.
     cmds:
       - echo "Pulling live flows and config..."
-      # Pull from the new logic directory
-      - podman cp {{.CONTAINER_NAME}}:/opt/m32-logic/flows.json {{.SRC_DIR}}/flows.json
+      # flows.json is written by Node-RED to /data/flows.json at runtime
+      - podman cp {{.CONTAINER_NAME}}:/data/flows.json ../m32-flows/flows.json
+      # palette dependencies stay in this repo
       - podman cp {{.CONTAINER_NAME}}:/opt/m32-logic/package.json {{.SRC_DIR}}/package.json
       # Pull mixer_config from the persistent volume
       - podman cp {{.CONTAINER_NAME}}:/data/mixer_config.json {{.SRC_DIR}}/mixer_config.json
-      - echo "Done! Ready for Git."
+      - echo "Done! Commit changes in ../m32-flows/ and push to update flows at church."
 
   build:
     desc: Rebuilds the container image locally using the Dockerfile in /containers/app.
     cmds:
-      - podman-compose -f docker-compose.prod.yml pull 
-      - podman-compose -f docker-compose.prod.yml up -d
+      - podman-compose -f docker-compose.yml pull 
+      - podman-compose -f docker-compose.yml up -d
       - task: status
 
   status:
@@ -33,7 +34,7 @@ tasks:
   down:
     desc: Stops and removes the container.
     cmds:
-      - podman-compose -f docker-compose.prod.yml down
+      - podman-compose -f docker-compose.yml down
   
   logs:
     desc: Follow the live logs from the mixer sync engine.
