@@ -3,23 +3,25 @@ services:
     image: ghcr.io/gj02ib65/lol_m32-utility:latest
     container_name: m32-sync-utility
     restart: always
-    network_mode: "host" # Disabled for macOS testing. Required on Linux production for zero-latency UDP.
-    ports:
-      - "1880:1880"
-      - "10023:10023/udp"
+    # host networking is required for zero-latency UDP communication with the M32 consoles.
+    # NOTE: When network_mode is "host", the ports: section is ignored by Podman/Docker.
+    # The container uses the host's network stack directly — no port mapping needed.
+    network_mode: "host"
     volumes:
-      - m32_church_data:/data # Podman handles all permissions here
-      # The lol_m32-flows repo directory is mounted read-only as the flows SOURCE.
-      # A startup script copies flows.json into /data/ at container start.
-      # Mounting the directory (not the file directly) avoids Node-RED's EBUSY
-      # rename error when it tries to atomically save the flows file.
+      - m32_church_data:/data
+      # The lol_m32-flows repo is mounted read-only as the flows source.
+      # A startup script in the image copies flows.json into /data/ at container start.
+      # IMPORTANT: This path assumes the following directory structure on the host:
+      #   C:\                        (or any drive)
+      #     m32-utility\             ← this repo (docker-compose.prod.yml lives here)
+      #     m32-flows\               ← lol_m32-flows repo (cloned from GitHub)
+      # If your directory layout is different, update the left side of this mount.
       - ../m32-flows:/opt/m32-flows-src:ro
     environment:
       - TZ=America/Chicago
       - NODE_RED_ENABLE_PROJECTS=false
-      # This tells your code where to find the IPs:
       - CONFIG_FILE_PATH=/data/mixer_config.json
-    # Pass the custom settings file so Node-RED loads our nodesDir configuration.
+    # Loads the custom settings file so Node-RED finds the installed palette nodes.
     command: --settings /opt/m32-logic/settings.js
 
   watchtower:
@@ -27,12 +29,13 @@ services:
     container_name: watchtower
     restart: always
     security_opt:
-      - label=disable # Required for Podman to allow root socket access
+      - label=disable # Required for Podman to allow socket access
     volumes:
-      # Use :z to satisfy Podman SELinux requirements. If using Rootless Podman on Linux, change to: /run/user/1000/podman/podman.sock:/var/run/docker.sock:z
-      - /var/run/docker.sock:/var/run/docker.sock:z
-    # Check for updates every Monday at 3 AM
+      # Rootless Podman on Windows exposes its socket via the Podman machine.
+      # Run `podman machine inspect` to find your exact socket path if this doesn't work.
+      - //./pipe/podman-machine-default:/var/run/docker.sock
+    # Check for image updates every Monday at 3 AM
     command: --schedule "0 0 3 * * 1" --cleanup m32-sync-utility
 
 volumes:
-  m32_church_data: # This creates a permanent internal drive
+  m32_church_data:

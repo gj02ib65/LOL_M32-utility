@@ -31,6 +31,13 @@ tasks:
       - echo "--- Current App Config ---"
       - podman exec {{.CONTAINER_NAME}} cat /data/mixer_config.json
 
+  start:
+    desc: Rebuilds the container image locally using the Dockerfile in /containers/app.
+    cmds:
+      - podman-compose -f docker-compose.prod.yml pull 
+      - podman-compose -f docker-compose.prod.yml up -d
+      - task: status
+
   down:
     desc: Stops and removes the container.
     cmds:
