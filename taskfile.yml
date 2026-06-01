@@ -34,8 +34,8 @@ tasks:
   start:
     desc: Rebuilds the container image locally using the Dockerfile in /containers/app.
     cmds:
-      - podman-compose -f docker-compose.prod.yml pull 
-      - podman-compose -f docker-compose.prod.yml up -d
+      - podman-compose -f ../m32-flows/docker-compose.yml pull 
+      - podman-compose -f ../m32-flows/docker-compose.yml up -d
       - task: status
 
   down:
