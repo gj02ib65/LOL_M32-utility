@@ -13,6 +13,8 @@ RUN mkdir -p /opt/m32-logic && chown -R node-red:node-red /opt/m32-logic
 #    This tells Node-RED's node scanner to look in /opt/m32-logic/node_modules
 #    for installed palette nodes (via the nodesDir setting).
 COPY --chown=node-red:node-red ./src/settings.js /opt/m32-logic/settings.js
+# Default config — copied to /data/mixer_config.json only on first run (never overwrites).
+COPY --chown=node-red:node-red ./src/mixer_config.json /opt/m32-logic/mixer_config.default.json
 
 # 3. Copy package.json to the prefix location and install palettes.
 #    npm install --prefix reads package.json FROM the prefix directory.

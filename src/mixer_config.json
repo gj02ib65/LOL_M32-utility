@@ -1,1 +1,6 @@
-{"primary_ip":"172.23.1.54","replica_ip":"192.168.15.64","safe_names":"stop, ambient, talkback","sim_mode":true}
+{
+    "primary_ip": "0.0.0.0",
+    "replica_ip": "0.0.0.0",
+    "safe_names": "ambient, talkback",
+    "sim_mode": true
+}

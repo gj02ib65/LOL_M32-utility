@@ -17,5 +17,15 @@ else
     echo "M32: No source flows at $SOURCE — using existing $DEST (or Node-RED default)"
 fi
 
+# Copy the default mixer config only if one doesn't exist yet in /data/.
+# This ensures first-run works while never overwriting a real configured file.
+DEFAULT_CONFIG=/opt/m32-logic/mixer_config.default.json
+DATA_CONFIG=/data/mixer_config.json
+
+if [ ! -f "$DATA_CONFIG" ]; then
+    cp "$DEFAULT_CONFIG" "$DATA_CONFIG"
+    echo "M32: Created default mixer_config.json in /data/ — update IPs via the Node-RED dashboard."
+fi
+
 # Delegate to the official Node-RED entrypoint
 exec /usr/src/node-red/entrypoint.sh "$@"
